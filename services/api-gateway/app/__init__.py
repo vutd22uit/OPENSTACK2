@@ -4,27 +4,46 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from shared.config import get_config
-from shared.service_client import ServiceClient
-from shared.tracing import init_tracer, instrument_app
 import logging
+
+sys.path.insert(0, '/app')
+
+try:
+    from shared.config import get_config
+    from shared.service_client import ServiceClient
+    from shared.tracing import init_tracer, instrument_app
+except ImportError as e:
+    print(f"Import error: {e}")
+    from shared.config import BaseConfig as get_config
+    from shared.service_client import ServiceClient
 
 logger = logging.getLogger(__name__)
 
 def create_app():
     app = Flask(__name__)
-    config = get_config()
+
+    try:
+        config = get_config()
+    except Exception:
+        class DefaultConfig:
+            REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379')
+            ENABLE_TRACING = os.getenv('ENABLE_TRACING', 'false').lower() == 'true'
+            JAEGER_AGENT_HOST = os.getenv('JAEGER_AGENT_HOST', 'jaeger')
+            JAEGER_AGENT_PORT = int(os.getenv('JAEGER_AGENT_PORT', 6831))
+        config = DefaultConfig()
 
     CORS(app)
 
     # Rate limiting
-    limiter = Limiter(
-        app=app,
-        key_func=get_remote_address,
-        default_limits=["200 per day", "50 per hour"],
-        storage_uri=config.REDIS_URL
-    )
+    try:
+        limiter = Limiter(
+            app=app,
+            key_func=get_remote_address,
+            default_limits=["200 per day", "50 per hour"],
+            storage_uri=config.REDIS_URL
+        )
+    except Exception as e:
+        logger.warning(f"Rate limiting initialization failed: {e}")
 
     # Service clients
     app.user_client = ServiceClient(os.getenv('USER_SERVICE_URL', 'http://user-service:5001'))
@@ -32,8 +51,11 @@ def create_app():
     app.order_client = ServiceClient(os.getenv('ORDER_SERVICE_URL', 'http://order-service:5003'))
 
     if config.ENABLE_TRACING:
-        init_tracer('api-gateway', config.JAEGER_AGENT_HOST, config.JAEGER_AGENT_PORT)
-        instrument_app(app)
+        try:
+            init_tracer('api-gateway', config.JAEGER_AGENT_HOST, config.JAEGER_AGENT_PORT)
+            instrument_app(app)
+        except Exception as e:
+            logger.warning(f"Tracing initialization failed: {e}")
 
     @app.route('/health')
     def health():

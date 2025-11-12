@@ -1,61 +1,57 @@
 """
-Shared configuration for microservices
+Shared configuration for microservices - simplified version
 """
 import os
 from typing import Optional
-from pydantic import BaseSettings, Field
 
 
-class BaseConfig(BaseSettings):
+class BaseConfig:
     """Base configuration for all services"""
 
-    # Service Info
-    SERVICE_NAME: str = Field(..., env="SERVICE_NAME")
-    SERVICE_VERSION: str = Field("1.0.0", env="SERVICE_VERSION")
-    ENVIRONMENT: str = Field("development", env="ENVIRONMENT")
+    def __init__(self):
+        # Service Info
+        self.SERVICE_NAME = os.getenv('SERVICE_NAME', 'unknown-service')
+        self.SERVICE_VERSION = os.getenv('SERVICE_VERSION', '1.0.0')
+        self.ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
-    # Server
-    HOST: str = Field("0.0.0.0", env="HOST")
-    PORT: int = Field(5000, env="PORT")
-    DEBUG: bool = Field(False, env="DEBUG")
+        # Server
+        self.HOST = os.getenv('HOST', '0.0.0.0')
+        self.PORT = int(os.getenv('PORT', 5000))
+        self.DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
 
-    # Database
-    DATABASE_URL: str = Field(..., env="DATABASE_URL")
-    DB_POOL_SIZE: int = Field(10, env="DB_POOL_SIZE")
-    DB_MAX_OVERFLOW: int = Field(20, env="DB_MAX_OVERFLOW")
+        # Database
+        self.DATABASE_URL = os.getenv('DATABASE_URL', '')
+        self.DB_POOL_SIZE = int(os.getenv('DB_POOL_SIZE', 10))
+        self.DB_MAX_OVERFLOW = int(os.getenv('DB_MAX_OVERFLOW', 20))
 
-    # Redis
-    REDIS_URL: str = Field("redis://localhost:6379", env="REDIS_URL")
-    REDIS_PASSWORD: Optional[str] = Field(None, env="REDIS_PASSWORD")
+        # Redis
+        self.REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+        self.REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
 
-    # RabbitMQ
-    RABBITMQ_URL: str = Field("amqp://guest:guest@localhost:5672/", env="RABBITMQ_URL")
+        # RabbitMQ
+        self.RABBITMQ_URL = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672/')
 
-    # Security
-    SECRET_KEY: str = Field(..., env="SECRET_KEY")
-    JWT_SECRET_KEY: str = Field(..., env="JWT_SECRET_KEY")
-    JWT_ALGORITHM: str = Field("HS256", env="JWT_ALGORITHM")
-    JWT_EXPIRATION_DELTA: int = Field(3600, env="JWT_EXPIRATION_DELTA")  # 1 hour
+        # Security
+        self.SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
+        self.JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key')
+        self.JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
+        self.JWT_EXPIRATION_DELTA = int(os.getenv('JWT_EXPIRATION_DELTA', 3600))
 
-    # CORS
-    CORS_ORIGINS: str = Field("*", env="CORS_ORIGINS")
+        # CORS
+        self.CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*')
 
-    # Observability
-    JAEGER_AGENT_HOST: str = Field("localhost", env="JAEGER_AGENT_HOST")
-    JAEGER_AGENT_PORT: int = Field(6831, env="JAEGER_AGENT_PORT")
-    ENABLE_TRACING: bool = Field(True, env="ENABLE_TRACING")
+        # Observability
+        self.JAEGER_AGENT_HOST = os.getenv('JAEGER_AGENT_HOST', 'localhost')
+        self.JAEGER_AGENT_PORT = int(os.getenv('JAEGER_AGENT_PORT', 6831))
+        self.ENABLE_TRACING = os.getenv('ENABLE_TRACING', 'false').lower() == 'true'
 
-    # Service Discovery
-    CONSUL_HOST: str = Field("localhost", env="CONSUL_HOST")
-    CONSUL_PORT: int = Field(8500, env="CONSUL_PORT")
+        # Service Discovery
+        self.CONSUL_HOST = os.getenv('CONSUL_HOST', 'localhost')
+        self.CONSUL_PORT = int(os.getenv('CONSUL_PORT', 8500))
 
-    # Circuit Breaker
-    CIRCUIT_BREAKER_FAIL_MAX: int = Field(5, env="CIRCUIT_BREAKER_FAIL_MAX")
-    CIRCUIT_BREAKER_TIMEOUT: int = Field(60, env="CIRCUIT_BREAKER_TIMEOUT")
-
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+        # Circuit Breaker
+        self.CIRCUIT_BREAKER_FAIL_MAX = int(os.getenv('CIRCUIT_BREAKER_FAIL_MAX', 5))
+        self.CIRCUIT_BREAKER_TIMEOUT = int(os.getenv('CIRCUIT_BREAKER_TIMEOUT', 60))
 
 
 def get_config() -> BaseConfig:
