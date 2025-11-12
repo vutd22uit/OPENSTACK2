@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_MULTIPLE_DATABASES: users_db,products_db,orders_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - microservices
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - microservices
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+    networks:
+      - microservices
+
+  # Microservices
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      SERVICE_NAME: user-service
+      PORT: 5001
+      DATABASE_URL: postgresql://devuser:devpass@postgres:5432/users_db
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      JWT_SECRET_KEY: dev-jwt-secret-change-in-prod
+      SECRET_KEY: dev-secret-key-change-in-prod
+      JAEGER_AGENT_HOST: jaeger
+      ENABLE_TRACING: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      SERVICE_NAME: product-service
+      PORT: 5002
+      DATABASE_URL: postgresql://devuser:devpass@postgres:5432/products_db
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: dev-secret-key-change-in-prod
+      JAEGER_AGENT_HOST: jaeger
+      ENABLE_TRACING: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      SERVICE_NAME: order-service
+      PORT: 5003
+      DATABASE_URL: postgresql://devuser:devpass@postgres:5432/orders_db
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: dev-secret-key-change-in-prod
+      USER_SERVICE_URL: http://user-service:5001
+      PRODUCT_SERVICE_URL: http://product-service:5002
+      JAEGER_AGENT_HOST: jaeger
+      ENABLE_TRACING: "true"
+    depends_on:
+      - user-service
+      - product-service
+      - postgres
+      - redis
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICE_NAME: api-gateway
+      PORT: 8080
+      REDIS_URL: redis://redis:6379
+      USER_SERVICE_URL: http://user-service:5001
+      PRODUCT_SERVICE_URL: http://product-service:5002
+      ORDER_SERVICE_URL: http://order-service:5003
+      JAEGER_AGENT_HOST: jaeger
+      ENABLE_TRACING: "true"
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - redis
+    networks:
+      - microservices
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  microservices:
+    driver: bridge

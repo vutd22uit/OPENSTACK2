@@ -42,7 +42,8 @@ resource "random_password" "master" {
 }
 
 resource "aws_secretsmanager_secret" "rds_password" {
-  name = "${var.project_name}-${var.environment}-rds-password"
+  name                    = "${var.project_name}-${var.environment}-rds-password"
+  recovery_window_in_days = 7
 
   tags = {
     Name = "${var.project_name}-${var.environment}-rds-password"
