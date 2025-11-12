@@ -1,0 +1,13 @@
+# ZAP Scanning Rules Configuration
+# Format: rule_id	action	comment
+# Actions: IGNORE, INFO, WARN, FAIL
+
+# Ignore false positives
+10021	IGNORE	X-Content-Type-Options header (handled by Flask)
+10020	IGNORE	X-Frame-Options header (handled by Flask)
+
+# Fail on critical issues
+40012	FAIL	Cross Site Scripting (Reflected)
+40014	FAIL	Cross Site Scripting (Persistent)
+40018	FAIL	SQL Injection
+90019	FAIL	Server Side Code Injection

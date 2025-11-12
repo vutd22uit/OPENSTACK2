@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+*.log
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Security
+*.pem
+*.key
+*.crt
+*.p12
+cosign.key
+cosign.pub
+security/sbom/*.json
+security/signatures/
+security-reports/
+
+# Docker
+.dockerignore
+
+# Reports
+reports/
+*.sarif
+*-report.json
+*-report.html
+htmlcov/
+.nyc_output/
+
+# Misc
+.pre-commit-config.yaml.backup
+node_modules/
+package-lock.json
+yarn.lock
